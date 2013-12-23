@@ -6,21 +6,20 @@ import (
 
 // with the restriction that 2nw − r − 1 is a Mersenne prime
 const (
-  w = iota // word size (in number of bits)
-  n = iota // degree of recurrence
-  m = iota // middle word, or the number of parallel sequences, 1 ≤ m ≤ n
-  r = iota // separation point of one word, or the number of bits of the lower bitmask, 0 ≤ r ≤ w - 1
-  a = iota // coefficients of the rational normal form twist matrix
-  b = iota // TGFSR(R) tempering bitmasks
-  c = iota // TGFSR(R) tempering bitmasks
-  s = iota // TGFSR(R) tempering bit shifts
-  t = iota // TGFSR(R) tempering bit shifts
-  u = iota // additional Mersenne Twister tempering bit shifts
-  l = iota // additional Mersenne Twister tempering bit shifts
+  mersenne_twister_n = 624 // degree of recurrence
+  mersenne_twister_m = 397 // middle word, or the number of parallel sequences, 1 ≤ m ≤ n
+  mersenne_twister_r = 31 // separation point of one word, or the number of bits of the lower bitmask, 0 ≤ r ≤ w - 1
+  mersenne_twister_a = 0x9908B0DF // coefficients of the rational normal form twist matrix
+  mersenne_twister_b = 0x9D2C5680 // TGFSR(R) tempering bitmasks
+  mersenne_twister_c = 0xEFC60000 // TGFSR(R) tempering bitmasks
+  mersenne_twister_s = 7 // TGFSR(R) tempering bit shifts
+  mersenne_twister_t = 15 // TGFSR(R) tempering bit shifts
+  mersenne_twister_u = 11 // additional Mersenne Twister tempering bit shifts
+  mersenne_twister_l = 18 // additional Mersenne Twister tempering bit shifts
 )
 
 type MersenneTwister struct {
-  State [624]uint32
+  State [mersenne_twister_n]uint32
   index int
 }
 
@@ -32,18 +31,18 @@ func NewMersenneTwister() MersenneTwister {
 func (m *MersenneTwister) Seed(seed uint32) {
   m.index = 0
   m.State[0] = seed
-  for i := 1; i < 624; i++ {
+  for i := 1; i < mersenne_twister_n; i++ {
     t := m.State[i - 1] ^ (m.State[i - 1] >> 30)
     m.State[i] = 1812433253 * (t + uint32(i))
   }
 }
 
 func (m *MersenneTwister) generate_numbers() {
-  for i := 0; i < 624; i++ {
-    y := (m.State[i] & 0x80000000) + (m.State[(i + 1) % 624] & 0x7fffffff)
-    m.State[i] = m.State[(i + 397) % 624] ^ (y >> 1)
+  for i := 0; i < mersenne_twister_n; i++ {
+    y := (m.State[i] & 0x80000000) + (m.State[(i + 1) % mersenne_twister_n] & 0x7fffffff)
+    m.State[i] = m.State[(i + mersenne_twister_m) % mersenne_twister_n] ^ (y >> 1)
     if y % 2 != 0 {
-      m.State[i] = m.State[i] ^ 2567483615
+      m.State[i] = m.State[i] ^ mersenne_twister_a
     }
   }
 }
@@ -54,12 +53,12 @@ func (m *MersenneTwister) Urand32() uint32 {
   }
 
   y := m.State[m.index]
-  y = y ^ (y >> 11)
-  y = y ^ ((y << 7) & 2636928640)
-  y = y ^ ((y << 15) & 4022730752)
-  y = y ^ (y >> 18)
+  y = y ^ (y >> mersenne_twister_u)
+  y = y ^ ((y << mersenne_twister_s) & mersenne_twister_b)
+  y = y ^ ((y << mersenne_twister_t) & mersenne_twister_c)
+  y = y ^ (y >> mersenne_twister_l)
 
-  m.index = (m.index + 1) % 624
+  m.index = (m.index + 1) % mersenne_twister_n
   return y
 }
 
@@ -126,16 +125,20 @@ func main() {
   m := NewMersenneTwister()
   m.Seed(0)
 
-  for i := 0; i < 623; i++ {
-    v := m.Urand32()
+  for j := 0; j < 1000; j++ {
+    for i := 0; i < 623; i++ {
+      v := m.Urand32()
 
-    li := m.index - 1
-    if li < 0 { li = 0 }
-    s0 := m.State[li]
-    s1 := m.Urand32ToState(v)
+      li := m.index - 1
+      if li < 0 { li = 0 }
+      s0 := m.State[li]
+      s1 := m.Urand32ToState(v)
 
-    if s0 != s1 {
-      fmt.Printf("%d %d, %d != %d\n", i, v, s0, s1)
+      if s0 != s1 {
+        fmt.Printf("%d %d, %d != %d\n", i, v, s0, s1)
+      }
     }
+    // evens out so we get generate_numbers called again
+    m.Urand32()
   }
 }
