@@ -30,8 +30,7 @@ func (b *BlumBlumShub) Seed(p *big.Int, q *big.Int, s *big.Int) {
 }
 
 func (b *BlumBlumShub) generate_next_term() {
-  b.Term.Mul(b.Term, b.Term)
-  b.Term.Mod(b.Term, b.M)
+  b.Term.Exp(b.Term, big.NewInt(2), b.M)
 }
 
 // We generate uint32 from the LSB of 32 terms. Therefore the
