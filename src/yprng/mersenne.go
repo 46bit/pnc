@@ -63,16 +63,79 @@ func (m *MersenneTwister) Urand32() uint32 {
   return y
 }
 
-func main() {
-  debug := true
+func (m *MersenneTwister) coded_xor(urand32 uint32, changebit_index uint32, xorbit_index uint32) uint32 {
+  changebit_shift_index := 31 - changebit_index
+  xorbit_shift_index := 31 - xorbit_index
 
+  changebit := (urand32 >> changebit_shift_index) & 1
+  xorbit := (urand32 >> xorbit_shift_index) & 1
+  result := changebit ^ xorbit
+
+  if changebit == 1 && result == 0 {
+    urand32 -= (1 << changebit_shift_index)
+  } else if changebit == 0 && result == 1 {
+    urand32 += (1 << changebit_shift_index)
+  }
+
+  return urand32
+}
+
+func (m *MersenneTwister) coded_and_xor(urand32 uint32, uand32 uint32, changebit_index uint32, xorbit_index uint32) uint32 {
+  xorbit_shift_index := 31 - xorbit_index
+  changebit_shift_index := 31 - changebit_index
+
+  changebit := (urand32 >> changebit_shift_index) & 1
+  uandbit := (uand32 >> changebit_shift_index) & 1
+  xorbit := (urand32 >> xorbit_shift_index) & 1
+  result := xorbit & uandbit
+
+  result = changebit ^ result
+
+  if changebit == 1 && result == 0 {
+    urand32 -= (1 << changebit_shift_index)
+  } else if changebit == 0 && result == 1 {
+    urand32 += (1 << changebit_shift_index)
+  }
+
+  return urand32
+}
+
+func (m *MersenneTwister) Urand32ToState(urand32 uint32) uint32 {
+  for i := uint32(18); i <= 31; i++ {
+    urand32 = m.coded_xor(urand32, i, i - 18)
+  }
+
+  for i := uint32(16); true; i-- {
+    urand32 = m.coded_and_xor(urand32, 4022730752, i, i + 15)
+    if i == 0 { break }
+  }
+
+  for i := uint32(24); true; i-- {
+    urand32 = m.coded_and_xor(urand32, 2636928640, i, i + 7)
+    if i == 0 { break }
+  }
+
+  for i := uint32(11); i <= 31; i++ {
+    urand32 = m.coded_xor(urand32, i, i - 11)
+  }
+
+  return urand32
+}
+
+func main() {
   m := NewMersenneTwister()
   m.Seed(0)
 
-  for i := 0; r < 1000000; i++ {
-    r := m.Urand32()
-    fmt.Printf("%dth value is %d\n", i, r)
-  }
+  for i := 0; i < 623; i++ {
+    v := m.Urand32()
 
-  if debug { fmt.Println("EOF") }
+    li := m.index - 1
+    if li < 0 { li = 0 }
+    s0 := m.State[li]
+    s1 := m.Urand32ToState(v)
+
+    if s0 != s1 {
+      fmt.Printf("%d %d, %d != %d\n", i, v, s0, s1)
+    }
+  }
 }
