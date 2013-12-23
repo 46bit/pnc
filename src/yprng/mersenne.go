@@ -37,6 +37,13 @@ func (m *MersenneTwister) Seed(seed uint32) {
   }
 }
 
+func (m *MersenneTwister) SeedFromUrand32s(urand32s [mersenne_twister_n]uint32) {
+  m.index = 0
+  for i := 0; i < len(urand32s); i++ {
+    m.State[i] = m.Urand32ToState(urand32s[i])
+  }
+}
+
 func (m *MersenneTwister) generate_numbers() {
   for i := 0; i < mersenne_twister_n; i++ {
     y := (m.State[i] & 0x80000000) + (m.State[(i + 1) % mersenne_twister_n] & 0x7fffffff)
@@ -105,12 +112,12 @@ func (m *MersenneTwister) Urand32ToState(urand32 uint32) uint32 {
   }
 
   for i := uint32(16); true; i-- {
-    urand32 = m.coded_and_xor(urand32, 4022730752, i, i + 15)
+    urand32 = m.coded_and_xor(urand32, mersenne_twister_c, i, i + 15)
     if i == 0 { break }
   }
 
   for i := uint32(24); true; i-- {
-    urand32 = m.coded_and_xor(urand32, 2636928640, i, i + 7)
+    urand32 = m.coded_and_xor(urand32, mersenne_twister_b, i, i + 7)
     if i == 0 { break }
   }
 
@@ -125,20 +132,15 @@ func main() {
   m := NewMersenneTwister()
   m.Seed(0)
 
-  for j := 0; j < 1000; j++ {
-    for i := 0; i < 623; i++ {
-      v := m.Urand32()
+  var urand32s [624]uint32
+  for i := 0; i < len(urand32s); i++ {
+    urand32s[i] = m.Urand32()
+  }
 
-      li := m.index - 1
-      if li < 0 { li = 0 }
-      s0 := m.State[li]
-      s1 := m.Urand32ToState(v)
+  m2 := NewMersenneTwister()
+  m2.SeedFromUrand32s(urand32s)
 
-      if s0 != s1 {
-        fmt.Printf("%d %d, %d != %d\n", i, v, s0, s1)
-      }
-    }
-    // evens out so we get generate_numbers called again
-    m.Urand32()
+  for i := 0; i < 10000; i++ {
+    fmt.Printf("%d = %d\n", m.Urand32(), m2.Urand32())
   }
 }
