@@ -1,4 +1,4 @@
-package main
+package pinocchio
 
 // with the restriction that 2nw − r − 1 is a Mersenne prime
 const (

@@ -1,8 +1,6 @@
 .DS_Store
 Icon?
 ._*
-
-/bin
 /tmp
 *.o
 *.a

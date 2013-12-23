@@ -1,4 +1,4 @@
-package main
+package pinocchio
 
 import (
   "fmt"
