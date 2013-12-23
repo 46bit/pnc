@@ -1,9 +1,5 @@
 package main
 
-import (
-  "fmt"
-)
-
 // with the restriction that 2nw − r − 1 is a Mersenne prime
 const (
   mersenne_twister_n = 624 // degree of recurrence

@@ -1,8 +1,6 @@
 package main
 
 import (
-//  "os"
-  "fmt"
   "io/ioutil"
   "encoding/json"
 )
