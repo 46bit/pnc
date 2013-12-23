@@ -46,6 +46,7 @@ func (b *BlumBlumShub) Urand32() uint32 {
   return urand32
 }
 
+/*
 func main() {
   // @TODO: These p, q, s are far too small, with a series length of only 12.
   p := big.NewInt(11)
@@ -61,3 +62,4 @@ func main() {
     fmt.Printf("%dth value is %d\n", i, v)
   }
 }
+*/

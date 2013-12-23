@@ -48,6 +48,7 @@ func (b *BlumMicali) Urand32() uint32 {
   return urand32
 }
 
+/*
 func main() {
   p := big.NewInt(1169939)
   g := big.NewInt(69937)
@@ -69,3 +70,4 @@ func main() {
     }
   }
 }
+*/

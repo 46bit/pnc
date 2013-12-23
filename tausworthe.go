@@ -80,17 +80,16 @@ func NewTauswortheGeneratorFromJSONFile(jpath string) (TauswortheGenerator, erro
   return NewTauswortheGeneratorFromJSON(tausworthe_generator_json)
 }
 
+/*
 func main() {
   debug := true
 
   t := NewTauswortheGenerator()
   t.Seed(987234789)
 
-  /*
   // Print the generator post-seed as JSON.
-  t_json, _ := t.AsJSON()
-  fmt.Println(string(t_json))
-  */
+  //t_json, _ := t.AsJSON()
+  //fmt.Println(string(t_json))
 
   // Load the generator from a JSON file. Handy for getting values quickly with a
   // known seed, given how long the mixing takes...
@@ -107,3 +106,4 @@ func main() {
 
   if debug { fmt.Println("EOF") }
 }
+*/

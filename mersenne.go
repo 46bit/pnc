@@ -128,6 +128,7 @@ func (m *MersenneTwister) Urand32ToState(urand32 uint32) uint32 {
   return urand32
 }
 
+/*
 func main() {
   m := NewMersenneTwister()
   m.Seed(0)
@@ -144,3 +145,4 @@ func main() {
     fmt.Printf("%d = %d\n", m.Urand32(), m2.Urand32())
   }
 }
+*/
