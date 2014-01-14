@@ -10,4 +10,4 @@ A collection of pseudorandom number generators built in Go for security research
 * Blum Micali
 
 ## About
-Built by [Michael Mokrysz](https://46b.it) in December 2013. Licensed under BSD.
+Built by [Michael Mokrysz](https://46b.it) from December 2013. Licensed under MIT.
