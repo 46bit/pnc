@@ -1,6 +1,7 @@
 package pinocchio
 
 import (
+  "fmt"
   "io/ioutil"
   "encoding/json"
 )
@@ -14,8 +15,9 @@ const (
 )
 
 type TauswortheGenerator struct {
-  current_index uint32
   Registers [lfsr_width]uint32
+  StateBit uint32
+  StateIndex uint64
 }
 
 func NewTauswortheGenerator() TauswortheGenerator {
@@ -25,7 +27,6 @@ func NewTauswortheGenerator() TauswortheGenerator {
 
 func (t *TauswortheGenerator) Seed(seed uint32) {
   fmt.Println("TauswortheGenerator.Seed: note that seeding this takes ages due to slow mixing")
-  t.current_index = 0
   for pi := 0; pi < lfsr_width; pi++ {
     if (seed >> (uint32(pi) % 32)) % 2 == 1 {
       t.Registers[pi] = 1
@@ -33,13 +34,15 @@ func (t *TauswortheGenerator) Seed(seed uint32) {
       t.Registers[pi] = 0
     }
   }
+  t.StateBit = 32
   for ri := 0; ri < r; ri++ {
     t.Urand32()
   }
 }
 
 func (t *TauswortheGenerator) generate_number() {
-  t.current_index = 0
+  t.StateIndex++
+  t.StateBit = 0
   v := (t.Registers[lfsr_width - 33] + t.Registers[lfsr_width - 48]) % 2
   for lfsri := 1; lfsri < lfsr_width; lfsri++ {
     t.Registers[lfsri - 1] = t.Registers[lfsri]
@@ -48,11 +51,11 @@ func (t *TauswortheGenerator) generate_number() {
 }
 
 func (t *TauswortheGenerator) Bit() uint32 {
-  bit := uint32(t.Registers[t.current_index * d])
-  t.current_index++
-  if t.current_index == 32 {
+  if t.StateBit >= 32 {
     t.generate_number()
   }
+  bit := uint32(t.Registers[t.StateBit * d])
+  t.StateBit++
   return bit
 }
 
