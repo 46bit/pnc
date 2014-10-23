@@ -1,7 +1,7 @@
-package main
+package pinocchio
 
 import (
-  "os"
+//  "os"
   "fmt"
 //  "errors"
   "math/big"
@@ -133,7 +133,7 @@ func (c *IncrementingBlockCipher) BytesAsBigInt(block []byte) *big.Int {
   return bigblock
 }
 
-func main() {
+/*func main() {
   c := NewIncrementingBlockCipher()
 
   key := big.NewInt(0)
@@ -160,4 +160,4 @@ func main() {
     return
   }
   fmt.Printf("decodedtext: %d '%s'\n", len(decodedtext), decodedtext)
-}
+}*/
