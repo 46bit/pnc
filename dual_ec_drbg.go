@@ -45,13 +45,12 @@ func NewECCurve(n, a, b, fp, px, py, qx, qy string) *ECCurve {
   curve.Q.X.SetString(qx, 16)
   curve.Q.Y.SetString(qy, 16)
 
-  fmt.Printf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n", curve.N.String(), curve.A.String(), curve.B.String(), curve.Fp.String(), curve.P.X.String(), curve.P.Y.String(), curve.Q.X.String(), curve.Q.Y.String())
-
   return &curve
 }
 
 func NewDualECDRBG(curve *ECCurve) *DualECDRBG {
   g := DualECDRBG{curve, big.NewInt(0), big.NewInt(0), 0, 0}
+  // @TODO: Arrange Seed routines.
 
   return &g
 }
@@ -62,7 +61,7 @@ func (g *DualECDRBG) Seed(seed *big.Int) {
   g.generate_number()
 }
 
-func (curve *ECCurve) OnCurve(p ECPoint) bool {
+func (curve *ECCurve) Satisfied(p ECPoint) bool {
   // On curve if (y^2) - (x^3 + ax + b (mod p)) == 0
 
   // y^2
@@ -88,27 +87,29 @@ func (curve *ECCurve) OnCurve(p ECPoint) bool {
   diff := big.NewInt(0)
   diff.Sub(y2, rhs)
 
+  fmt.Printf("Satisfied?:\nlhs = %d\nrhs = %d\ndiff = %d\n\n", y2, rhs, diff)
+
   return diff.Cmp(big.NewInt(0)) == 0
 }
 
 func (g *DualECDRBG) generate_number() {
   g.StateIndex++
   g.StateBit = 0
-  s := g.curve.ScalarMultEllipticalPoint(g.S, g.curve.P)
-  if !g.curve.OnCurve(s) {
+  s := g.curve.ScalarMultiply(g.S, g.curve.P)
+  if !g.curve.Satisfied(s) {
     fmt.Println("s not on curve")
   }
-  z := g.curve.ScalarMultEllipticalPoint(s.X, g.curve.Q)
-  if !g.curve.OnCurve(z) {
+  z := g.curve.ScalarMultiply(s.X, g.curve.Q)
+  if !g.curve.Satisfied(z) {
     fmt.Println("z not on curve")
   }
   g.S = s.X
   g.Z = z.X
 }
 
-func (curve *ECCurve) AddEllipticalPoints(p1 ECPoint, p2 ECPoint) ECPoint {
+func (curve *ECCurve) Add(p1 ECPoint, p2 ECPoint) ECPoint {
   if p1.X == p2.X && p1.Y == p2.Y {
-    return curve.DoubleEllipticalPoint(p1)
+    return curve.Double(p1)
   }
 
   st := big.NewInt(0)
@@ -137,7 +138,7 @@ func (curve *ECCurve) AddEllipticalPoints(p1 ECPoint, p2 ECPoint) ECPoint {
   return p3
 }
 
-func (curve *ECCurve) DoubleEllipticalPoint(p1 ECPoint) ECPoint {
+func (curve *ECCurve) Double(p1 ECPoint) ECPoint {
   p2 := ECPoint{big.NewInt(0), big.NewInt(0), false}
   s := big.NewInt(0)
   s.Exp(p1.X, big.NewInt(2), nil)
@@ -166,24 +167,37 @@ func (curve *ECCurve) DoubleEllipticalPoint(p1 ECPoint) ECPoint {
   return p2
 }
 
-func (curve *ECCurve) ScalarMultEllipticalPoint(scalar *big.Int, p1 ECPoint) ECPoint {
+func (curve *ECCurve) ScalarMultiply(scalar *big.Int, p1 ECPoint) ECPoint {
   //scalar.Mod(scalar, curve.Fp)
 
   r := ECPoint{big.NewInt(0), big.NewInt(0), false} // Point at infinity
   r.X.SetString(p1.X.String(), 10)
   r.Y.SetString(p1.Y.String(), 10)
 
+  // @TODO: Somehow these operations appear to work with r := p1 or when done
+  // outside this method. Something memoryish is wrong?
   for i := 0; i < scalar.BitLen(); i++ {
-    if curve.OnCurve(r) {
-      fmt.Printf("%d on curve\n", i)
+    if curve.Satisfied(r) {
+      fmt.Printf("%d on curve before %d\n", i, scalar.Bit(i))
     } else {
-      fmt.Printf("%d not on curve\n", i)
+      fmt.Printf("%d not on curve before %d\n", i, scalar.Bit(i))
     }
 
     if scalar.Bit(i) == 1 {
-      r = curve.AddEllipticalPoints(r, p1)
+      r = curve.Add(r, p1)
     }
-    r = curve.DoubleEllipticalPoint(r)
+    if curve.Satisfied(r) {
+      fmt.Printf("%d on curve just after %d\n", i, scalar.Bit(i))
+    } else {
+      fmt.Printf("%d not on curve just after %d\n", i, scalar.Bit(i))
+    }
+    r = curve.Double(r)
+
+    if curve.Satisfied(r) {
+      fmt.Printf("%d on curve after %d\n", i, scalar.Bit(i))
+    } else {
+      fmt.Printf("%d not on curve after %d\n", i, scalar.Bit(i))
+    }
   }
 
   return r
