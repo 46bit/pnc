@@ -32,12 +32,18 @@ func (g *DualECDRBG) generate_number() {
   g.StateIndex++
   g.StateBit = 0
   s := g.C.ScalarMultiply(g.S, g.C.G)
+  z := g.C.ScalarMultiply(s.X, g.Q)
   if !g.C.Satisfied(s) {
     fmt.Println("s not on curve")
   }
-  z := g.C.ScalarMultiply(s.X, g.Q)
   if !g.C.Satisfied(z) {
     fmt.Println("z not on curve")
+  }
+  if !s.Finite() {
+    fmt.Println("s infinite")
+  }
+  if !z.Finite() {
+    fmt.Println("z infinite")
   }
   g.S = s.X
   g.Z = z.X

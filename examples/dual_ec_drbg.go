@@ -34,12 +34,9 @@ func main() {
   // ----------------
 
   // Check generator point is on the curve.
-  if curve.Satisfied(curve.G) {
-    fmt.Println("curve.G on curve :)")
-  } else {
-    fmt.Println("curve.G not on curve :(")
+  if !curve.Satisfied(curve.G) {
+    fmt.Println("Generator point not on curve!")
   }
-  fmt.Println("---")
 
   // ----------------
 
@@ -48,12 +45,17 @@ func main() {
     "84658269074130531148357510928537398853078465142270397446803060672548601752264",
     "32478479853643897696398775628369298920280560255617340607511813418971428614048",
     10)
-  if curve.Satisfied(p) {
-    fmt.Println("p on curve :)")
-  } else {
-    fmt.Println("p not on curve :(")
+  if !curve.Satisfied(p) {
+    fmt.Println("Known-good point not on curve!")
   }
-  fmt.Println("---")
+
+  // ----------------
+
+  // Check add routine seems to keep points on the curve (a *weak* suggestion
+  // the routine is correct).
+  if !curve.Satisfied(curve.Add(p, curve.G)) {
+    fmt.Println("Generator point plus known-good point not on curve!")
+  }
 
   // ----------------
 
@@ -62,37 +64,25 @@ func main() {
   p = curve.G
   for i := 1; i <= 100; i++ {
     p = curve.Double(p)
-    if curve.Satisfied(p) {
-      fmt.Printf("curve.Q*2(%d) on curve :)\n", i)
-    } else {
-      fmt.Printf("curve.Q*2(%d) not on curve :(\n", i)
+    if !curve.Satisfied(p) {
+      fmt.Printf("Generator point doubled %d times is not on curve!\n", i)
+    }
+    if !p.Finite() {
+      fmt.Printf("Generator point doubled %d times was infinite!\n", i)
     }
   }
-  fmt.Println("---")
 
   // ----------------
 
-  // Check add routine seems to keep points on the curve (a *weak* suggestion
-  // the routine is correct).
-  if curve.Satisfied(curve.Add(curve.G, curve.G)) {
-    fmt.Println("curve.Q+curve.Q on curve :)")
-  } else {
-    fmt.Println("curve.Q+curve.Q not on curve :(")
-  }
-  fmt.Println("---")
-
-  // ----------------
-
-  // @TODO: Need to handle curve points at infinity. Example not implemented for now.
   p2 := &ec.Point{big.NewInt(0), big.NewInt(0)}
   p2 = curve.Add(curve.G, p2)
   p2 = curve.Double(p2)
   if curve.Satisfied(p2) {
-    fmt.Println("curve.P+curve.Q on curve :)")
-  } else {
-    fmt.Println("curve.P+curve.Q not on curve :(")
+    fmt.Println("Operations upon infinite point were on curve!")
   }
-  fmt.Println("---")
+  if p2.Finite() {
+    fmt.Println("Operations upon infinite point were finite!")
+  }
 
   // ----------------
 
@@ -100,13 +90,14 @@ func main() {
   // suggestion the routine is correct).
   p = curve.G
   n := big.NewInt(0)
-  n.SetString("1", 10)
-  if curve.Satisfied(curve.ScalarMultiply(n, p)) {
-    fmt.Printf("curve.Q*%d on curve :)\n", n)
-  } else {
-    fmt.Printf("curve.Q*%d not on curve :(\n", n)
+  n.SetString("e43fe3e4729612e27820e8c9ae246baf43f1d4281fcdc2ed", 16)
+  p2 = curve.ScalarMultiply(n, p)
+  if !curve.Satisfied(p2) {
+    fmt.Printf("Generator Point Multiplied < N was not on curve!", n)
   }
-  fmt.Println("---")
+  if !p2.Finite() {
+    fmt.Printf("Generator Point Multiplied < N was infinite!", n)
+  }
 
   // ----------------
 
@@ -114,23 +105,35 @@ func main() {
 
   // This addition works with r1.x < r2.x despite point addition being commutative
   // in nature. WTF, suggests something broken despite many known good results.
-  p2 = ec.NewPoint(
-    "56515219790691171413109057904011688695424810155802929973526481321309856242040",
-    "3377031843712258259223711451491452598088675519751548567112458094635497583569",
-    10)
-
   p1 := ec.NewPoint(
     "48439561293906451759052585252797914202762949526041747995844080717082404635286",
     "36134250956749795798585127919587881956611106672985015071877198253568414405109",
     10)
 
+  p2 = ec.NewPoint(
+    "56515219790691171413109057904011688695424810155802929973526481321309856242040",
+    "3377031843712258259223711451491452598088675519751548567112458094635497583569",
+    10)
+
   p3 := curve.Add(p1, p2)
-  if curve.Satisfied(p3) {
-    fmt.Println("curve.P+curve.Q on curve :)")
-  } else {
-    fmt.Println("curve.p+curve.Q not on curve :(")
+  if !curve.Satisfied(p3) {
+    fmt.Println("Non-commutative points where p1.x < p2.x was not on curve!")
   }
-  fmt.Println("---")
+  if !p3.Finite() {
+    fmt.Println("Non-commutative point where p1.x < p2.x was infinite!")
+  }
+
+  p4 := curve.Add(p2, p1)
+  if !curve.Satisfied(p3) {
+    fmt.Println("Non-commutative point where p1.x > p2.x was not on curve!")
+  }
+  if !p3.Finite() {
+    fmt.Println("Non-commutative point where p1.x > p2.x was infinite!")
+  }
+
+  if !p3.Eq(p4) {
+    fmt.Println("Non-commutative points were not equal when swapped!")
+  }
 
   // ----------------
 
@@ -144,8 +147,9 @@ func main() {
     ec.NewBigInt(dual_ec_drbg_curve_p256_qx, 16),
     ec.NewBigInt(dual_ec_drbg_curve_p256_qy, 16),
     s)
-  for i := 0; i < 20; i++ {
+  for i := 0; i < 20000; i++ {
     fmt.Printf("%d: %d\n", i, g.Urand32())
   }
-  fmt.Println("---")
+
+  // ----------------
 }

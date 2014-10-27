@@ -10,36 +10,13 @@ import (
 // from severe side channel attacks and I'll probably build a demo
 // of that one day.
 
-func NewBigInt(v string, base int) *big.Int {
-  b := big.NewInt(0)
-  b.SetString(v, base)
-  return b
-}
-
-type Point struct {
-  X *big.Int
-  Y *big.Int
-}
-
-func NewPoint(x string, y string, base int) *Point {
-  return &Point{NewBigInt(x, base), NewBigInt(y, base)}
-}
-
-func (p *Point) Copy() *Point {
-  return NewPoint(p.X.String(), p.Y.String(), 10)
-}
-
-func (p *Point) Finite() bool {
-  return p.X.String() != "0"
-}
-
 type PrimeCurve struct {
-  P *big.Int // Prime modulus
-  A *big.Int // y^2 = x^3 + Ax + b
-  B *big.Int // y^2 = x^3 + ax + B
-  G *Point // Generator
-  N *big.Int // Order of Generator
-  H *big.Int // Cofactor
+  P *big.Int // Prime modulus (NIST: p)
+  A *big.Int // y^2 = x^3 + Ax + b (NIST: a = -3)
+  B *big.Int // y^2 = x^3 + ax + B (NIST: b)
+  G *Point // Generator (NIST: G)
+  N *big.Int // Order of Generator (NIST: R)
+  H *big.Int // Cofactor (NIST: f = 1)
 }
 
 func NewPrimeCurve(p, a, b, gx, gy, n, h *big.Int) *PrimeCurve {
@@ -84,7 +61,7 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   }
 
   // Double p1 if p1==p2.
-  if p1.X.String() == p2.X.String() && p1.Y.String() == p2.Y.String() {
+  if p1.Eq(p2) {
     return c.Double(p1)
   }
 
