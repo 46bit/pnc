@@ -1,7 +1,7 @@
 pinocchio
 =========
 
-A collection of pseudorandom number generators built in Go for learning more about cryptology. These **are not intended for use in a practical system**.
+A collection of pseudorandom number generators built in Go for learning more about cryptography. These are not built to be secure and **will get you hacked if deployed in a real system**.
 
 ## Currently implemented
 * Tausworthe Generator
@@ -9,8 +9,6 @@ A collection of pseudorandom number generators built in Go for learning more abo
 * Blum Blum Shub
 * Blum Micali
 * Linear Congruential Generator
-
-## In progress
 * Dual EC DRBG
 
 ## About
