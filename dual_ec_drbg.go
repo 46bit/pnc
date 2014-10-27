@@ -10,8 +10,7 @@ type ECCurve struct {
   A *big.Int
   B *big.Int
   Fp *big.Int
-  P ECPoint
-  Q ECPoint
+  P *ECPoint
 }
 
 type ECPoint struct {
@@ -22,6 +21,7 @@ type ECPoint struct {
 
 type DualECDRBG struct {
   curve *ECCurve
+  Q *ECPoint
 
   Z *big.Int
   S *big.Int
@@ -29,16 +29,15 @@ type DualECDRBG struct {
   StateBit uint32
 }
 
-func NewECCurve(n, a, b, fp, px, py, qx, qy string) *ECCurve {
-  curve := ECCurve{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), ECPoint{}, ECPoint{}}
+func NewECCurve(n, a, b, fp, px, py string) *ECCurve {
+  curve := ECCurve{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil}
 
   curve.N.SetString(n, 10)
   curve.A.SetString(a, 10)
   curve.B.SetString(b, 16)
   curve.Fp.SetString(fp, 10)
 
-  curve.P = *NewECPoint(px, py, 16)
-  curve.Q = *NewECPoint(qx, qy, 16)
+  curve.P = NewECPoint(px, py, 16)
 
   return &curve
 }
@@ -56,15 +55,14 @@ func (old_point *ECPoint) CopyECPoint() *ECPoint {
   return new_point
 }
 
-func NewDualECDRBG(curve *ECCurve) *DualECDRBG {
-  g := DualECDRBG{curve, big.NewInt(0), big.NewInt(0), 0, 0}
-  // @TODO: Arrange Seed routines.
-
+func NewDualECDRBG(curve *ECCurve, qx, qy string, seed *big.Int) *DualECDRBG {
+  g := DualECDRBG{curve, NewECPoint(qx, qy, 16), big.NewInt(0), big.NewInt(0), 0, 0}
+  g.seed(seed)
   return &g
 }
 
 // Seed is twice security_strength bits long (at least 256)
-func (g *DualECDRBG) Seed(seed *big.Int) {
+func (g *DualECDRBG) seed(seed *big.Int) {
   g.S = seed
   g.generate_number()
 }
@@ -101,11 +99,11 @@ func (curve *ECCurve) Satisfied(p *ECPoint) bool {
 func (g *DualECDRBG) generate_number() {
   g.StateIndex++
   g.StateBit = 0
-  s := g.curve.ScalarMultiply(g.S, &g.curve.P)
+  s := g.curve.ScalarMultiply(g.S, g.curve.P)
   if !g.curve.Satisfied(s) {
     fmt.Println("s not on curve")
   }
-  z := g.curve.ScalarMultiply(s.X, &g.curve.Q)
+  z := g.curve.ScalarMultiply(s.X, g.Q)
   if !g.curve.Satisfied(z) {
     fmt.Println("z not on curve")
   }
