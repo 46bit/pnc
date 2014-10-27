@@ -114,14 +114,8 @@ func (g *DualECDRBG) generate_number() {
 }
 
 func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
-  fmt.Printf("  x = %d\n  y = %d\n  s = %d\n", p1.X, p1.Y, curve.Satisfied(p1))
-  fmt.Printf("+\n  x = %d\n  y = %d\n  s = %d\n", p2.X, p2.Y, curve.Satisfied(p2))
-
   if p1.X.String() == p2.X.String() && p1.Y.String() == p2.Y.String() {
-    p3 := curve.Double(p1)
-    fmt.Printf("=\n  x = %d\n  y = %d\n  s = %d\n", p3.X, p3.Y, curve.Satisfied(p3))
-    fmt.Println("\n-------\n")
-    return p3
+    return curve.Double(p1)
   }
 
   // Addition must be commutative. Yet this routine works IFF p1.X < p2.X.
@@ -158,9 +152,6 @@ func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
 
   p3.X.Mod(p3.X, curve.Fp)
   p3.Y.Mod(p3.Y, curve.Fp)
-
-  fmt.Printf("=\n  x = %d\n  y = %d\n  s = %d\n", p3.X, p3.Y, curve.Satisfied(&p3))
-  fmt.Println("\n-------\n")
 
   return &p3
 }
@@ -219,7 +210,6 @@ func (g *DualECDRBG) Bit() uint32 {
 }
 
 func (g *DualECDRBG) Urand32() uint32 {
-  fmt.Println(g.Z.String())
   v := uint32(0)
   for i := 0; i < 32; i++ {
     v = (v<<1) + g.Bit()
