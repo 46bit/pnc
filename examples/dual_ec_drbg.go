@@ -84,7 +84,7 @@ func main() {
   // ----------------
 
   // @TODO: Need to handle curve points at infinity. Example not implemented for now.
-  p2 := &ec.Point{big.NewInt(0), big.NewInt(0), false}
+  p2 := &ec.Point{big.NewInt(0), big.NewInt(0)}
   p2 = curve.Add(curve.G, p2)
   p2 = curve.Double(p2)
   if curve.Satisfied(p2) {

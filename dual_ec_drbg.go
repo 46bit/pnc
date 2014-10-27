@@ -3,7 +3,7 @@ package pinocchio
 import (
   "fmt"
   "math/big"
-  "github.com/46bit/pinocchio/ec" // @TODO: Can relatively refer to packages?
+  "github.com/46bit/pinocchio/ec"
 )
 
 type DualECDRBG struct {
@@ -17,7 +17,7 @@ type DualECDRBG struct {
 }
 
 func NewDualECDRBG(c *ec.PrimeCurve, qx, qy, seed *big.Int) *DualECDRBG {
-  g := DualECDRBG{c, &ec.Point{qx, qy, false}, big.NewInt(0), big.NewInt(0), 0, 0}
+  g := DualECDRBG{c, &ec.Point{qx, qy}, big.NewInt(0), big.NewInt(0), 0, 0}
   g.seed(seed)
   return &g
 }

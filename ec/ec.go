@@ -19,20 +19,18 @@ func NewBigInt(v string, base int) *big.Int {
 type Point struct {
   X *big.Int
   Y *big.Int
-  Infinite bool
 }
 
 func NewPoint(x string, y string, base int) *Point {
-  p := &Point{NewBigInt(x, base), NewBigInt(y, base), false}
-  // @TODO: This check will cause problems with initialising points as blank.
-  //p.Infinite = p.X.Cmp(NewBigInt(0, 10)) == 0
-  return p
+  return &Point{NewBigInt(x, base), NewBigInt(y, base)}
 }
 
-func (o *Point) Copy() *Point {
-  n := NewPoint(o.X.String(), o.Y.String(), 10)
-  n.Infinite = o.Infinite
-  return n
+func (p *Point) Copy() *Point {
+  return NewPoint(p.X.String(), p.Y.String(), 10)
+}
+
+func (p *Point) Finite() bool {
+  return p.X.String() != "0"
 }
 
 type PrimeCurve struct {
@@ -45,7 +43,7 @@ type PrimeCurve struct {
 }
 
 func NewPrimeCurve(p, a, b, gx, gy, n, h *big.Int) *PrimeCurve {
-  c := PrimeCurve{p, a, b, &Point{gx, gy, false}, n, h}
+  c := PrimeCurve{p, a, b, &Point{gx, gy}, n, h}
   return &c
 }
 
@@ -79,8 +77,13 @@ func (c *PrimeCurve) Satisfied(p *Point) bool {
 }
 
 func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
-  // Handle points adding to 0 (Infinite).
+  // Return infinite point if p1 or p2 is infinite. Return infinite point if
+  // p1 == -p1 (x1==x2, y1==-y2).
+  if (p1.X.Cmp(p2.X) == 0 && p1.Y.Cmp(p2.Y) < 0) || !p1.Finite() || !p2.Finite() {
+    return &Point{big.NewInt(0), big.NewInt(0)}
+  }
 
+  // Double p1 if p1==p2.
   if p1.X.String() == p2.X.String() && p1.Y.String() == p2.Y.String() {
     return c.Double(p1)
   }
@@ -107,7 +110,7 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   mi.ModInverse(sb, c.P)
   st.Mul(st, mi)
 
-  p3 := Point{big.NewInt(0), big.NewInt(0), false}
+  p3 := &Point{big.NewInt(0), big.NewInt(0)}
 
   p3.X.Exp(st, big.NewInt(2), nil)
   p3.X.Sub(p3.X, p1.X)
@@ -120,10 +123,15 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   p3.X.Mod(p3.X, c.P)
   p3.Y.Mod(p3.Y, c.P)
 
-  return &p3
+  return p3
 }
 
 func (c *PrimeCurve) Double(p1 *Point) *Point {
+  // If p1 infinite or y1==0, give infinite point.
+  if !p1.Finite() || p1.Y.String() == "0" {
+    return &Point{big.NewInt(0), big.NewInt(0)}
+  }
+
   s := big.NewInt(0)
   s.Exp(p1.X, big.NewInt(2), nil)
   s.Mul(s, big.NewInt(3))
@@ -136,7 +144,7 @@ func (c *PrimeCurve) Double(p1 *Point) *Point {
   mi.ModInverse(k, c.P)
   s.Mul(s, mi)
 
-  p2 := &Point{big.NewInt(0), big.NewInt(0), false}
+  p2 := &Point{big.NewInt(0), big.NewInt(0)}
 
   p2.X.Exp(s, big.NewInt(2), nil)
   px2 := big.NewInt(0)
@@ -158,6 +166,7 @@ func (c *PrimeCurve) ScalarMultiply(scalar *big.Int, p1 *Point) *Point {
 
   r := p1.Copy()
 
+  // Particularly vulnerable to side-channel attacks between add and double.
   for i := 0; i < scalar.BitLen(); i++ {
     if scalar.Bit(i) == 1 {
       r = c.Add(r, p1)
