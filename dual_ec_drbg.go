@@ -3,11 +3,12 @@ package pinocchio
 import (
   "fmt"
   "math/big"
+  "github.com/46bit/pinocchio/ec" // @TODO: Can relatively refer to packages?
 )
 
 type DualECDRBG struct {
-  curve *ECCurve
-  Q *ECPoint
+  C *ec.PrimeCurve
+  Q *ec.Point
 
   Z *big.Int
   S *big.Int
@@ -15,8 +16,8 @@ type DualECDRBG struct {
   StateBit uint32
 }
 
-func NewDualECDRBG(curve *ECCurve, qx, qy string, seed *big.Int) *DualECDRBG {
-  g := DualECDRBG{curve, NewECPoint(qx, qy, 16), big.NewInt(0), big.NewInt(0), 0, 0}
+func NewDualECDRBG(c *ec.PrimeCurve, qx, qy, seed *big.Int) *DualECDRBG {
+  g := DualECDRBG{c, &ec.Point{qx, qy, false}, big.NewInt(0), big.NewInt(0), 0, 0}
   g.seed(seed)
   return &g
 }
@@ -30,12 +31,12 @@ func (g *DualECDRBG) seed(seed *big.Int) {
 func (g *DualECDRBG) generate_number() {
   g.StateIndex++
   g.StateBit = 0
-  s := g.curve.ScalarMultiply(g.S, g.curve.P)
-  if !g.curve.Satisfied(s) {
+  s := g.C.ScalarMultiply(g.S, g.C.G)
+  if !g.C.Satisfied(s) {
     fmt.Println("s not on curve")
   }
-  z := g.curve.ScalarMultiply(s.X, g.Q)
-  if !g.curve.Satisfied(z) {
+  z := g.C.ScalarMultiply(s.X, g.Q)
+  if !g.C.Satisfied(z) {
     fmt.Println("z not on curve")
   }
   g.S = s.X

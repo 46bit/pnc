@@ -1,4 +1,4 @@
-package pinocchio
+package ec
 
 import (
   "math/big"
@@ -10,53 +10,52 @@ import (
 // from severe side channel attacks and I'll probably build a demo
 // of that one day.
 
-type ECPoint struct {
+func NewBigInt(v string, base int) *big.Int {
+  b := big.NewInt(0)
+  b.SetString(v, base)
+  return b
+}
+
+type Point struct {
   X *big.Int
   Y *big.Int
   Infinite bool
 }
 
-func NewECPoint(x string, y string, base int) *ECPoint {
-  new_point := ECPoint{big.NewInt(0), big.NewInt(0), false}
-  new_point.X.SetString(x, base)
-  new_point.Y.SetString(y, base)
-  return &new_point
+func NewPoint(x string, y string, base int) *Point {
+  p := &Point{NewBigInt(x, base), NewBigInt(y, base), false}
+  // @TODO: This check will cause problems with initialising points as blank.
+  //p.Infinite = p.X.Cmp(NewBigInt(0, 10)) == 0
+  return p
 }
 
-func (old_point *ECPoint) CopyECPoint() *ECPoint {
-  new_point := NewECPoint(old_point.X.String(), old_point.Y.String(), 10)
-  new_point.Infinite = old_point.Infinite
-  return new_point
+func (o *Point) Copy() *Point {
+  n := NewPoint(o.X.String(), o.Y.String(), 10)
+  n.Infinite = o.Infinite
+  return n
 }
 
-type ECCurve struct {
-  N *big.Int
-  A *big.Int
-  B *big.Int
-  Fp *big.Int
-  P *ECPoint
+type PrimeCurve struct {
+  P *big.Int // Prime modulus
+  A *big.Int // y^2 = x^3 + Ax + b
+  B *big.Int // y^2 = x^3 + ax + B
+  G *Point // Generator
+  N *big.Int // Order of Generator
+  H *big.Int // Cofactor
 }
 
-func NewECCurve(n, a, b, fp, px, py string) *ECCurve {
-  curve := ECCurve{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil}
-
-  curve.N.SetString(n, 10)
-  curve.A.SetString(a, 10)
-  curve.B.SetString(b, 16)
-  curve.Fp.SetString(fp, 10)
-
-  curve.P = NewECPoint(px, py, 16)
-
-  return &curve
+func NewPrimeCurve(p, a, b, gx, gy, n, h *big.Int) *PrimeCurve {
+  c := PrimeCurve{p, a, b, &Point{gx, gy, false}, n, h}
+  return &c
 }
 
-func (curve *ECCurve) Satisfied(p *ECPoint) bool {
+func (c *PrimeCurve) Satisfied(p *Point) bool {
   // On curve if (y^2) - (x^3 + ax + b (mod p)) == 0
 
   // y^2
   y2 := big.NewInt(0)
   y2.Exp(p.Y, big.NewInt(2), nil)
-  y2.Mod(y2, curve.Fp)
+  y2.Mod(y2, c.P)
 
   // x^3
   x3 := big.NewInt(0)
@@ -64,13 +63,13 @@ func (curve *ECCurve) Satisfied(p *ECPoint) bool {
 
   // ax
   ax := big.NewInt(0)
-  ax.Mul(p.X, curve.A)
+  ax.Mul(p.X, c.A)
 
   // x^3 + ax + b (mod p)
   rhs := big.NewInt(0)
   rhs.Add(x3, ax)
-  rhs.Add(rhs, curve.B)
-  rhs.Mod(rhs, curve.Fp)
+  rhs.Add(rhs, c.B)
+  rhs.Mod(rhs, c.P)
 
   // (y^3 (mod p)) - (x^3 + ax + b (mod p))
   diff := big.NewInt(0)
@@ -79,9 +78,11 @@ func (curve *ECCurve) Satisfied(p *ECPoint) bool {
   return diff.Cmp(big.NewInt(0)) == 0
 }
 
-func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
+func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
+  // Handle points adding to 0 (Infinite).
+
   if p1.X.String() == p2.X.String() && p1.Y.String() == p2.Y.String() {
-    return curve.Double(p1)
+    return c.Double(p1)
   }
 
   // Addition must be commutative. Yet this routine works IFF p1.X < p2.X.
@@ -91,7 +92,7 @@ func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
   // @TODO: Work out if/where this function still fails and see if you can
   // identify the mistaken math. Number Theory class may help.
   if p1.X.Cmp(p2.X) > 0 {
-    tp := p1.CopyECPoint()
+    tp := p1.Copy()
     p1 = p2
     p2 = tp
   }
@@ -103,10 +104,10 @@ func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
 
   // Multiply by multiplicative inverse, not integer division.
   mi := big.NewInt(0)
-  mi.ModInverse(sb, curve.Fp)
+  mi.ModInverse(sb, c.P)
   st.Mul(st, mi)
 
-  p3 := ECPoint{big.NewInt(0), big.NewInt(0), false}
+  p3 := Point{big.NewInt(0), big.NewInt(0), false}
 
   p3.X.Exp(st, big.NewInt(2), nil)
   p3.X.Sub(p3.X, p1.X)
@@ -116,25 +117,26 @@ func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
   p3.Y.Mul(st, p3.Y)
   p3.Y.Sub(p3.Y, p1.Y)
 
-  p3.X.Mod(p3.X, curve.Fp)
-  p3.Y.Mod(p3.Y, curve.Fp)
+  p3.X.Mod(p3.X, c.P)
+  p3.Y.Mod(p3.Y, c.P)
 
   return &p3
 }
 
-func (curve *ECCurve) Double(p1 *ECPoint) *ECPoint {
-  p2 := ECPoint{big.NewInt(0), big.NewInt(0), false}
+func (c *PrimeCurve) Double(p1 *Point) *Point {
   s := big.NewInt(0)
   s.Exp(p1.X, big.NewInt(2), nil)
   s.Mul(s, big.NewInt(3))
-  s.Add(s, curve.A)
+  s.Add(s, c.A)
   k := big.NewInt(0)
   k.Mul(big.NewInt(2), p1.Y)
 
   // Multiply by multiplicative inverse, not integer division.
   mi := big.NewInt(0)
-  mi.ModInverse(k, curve.Fp)
+  mi.ModInverse(k, c.P)
   s.Mul(s, mi)
+
+  p2 := &Point{big.NewInt(0), big.NewInt(0), false}
 
   p2.X.Exp(s, big.NewInt(2), nil)
   px2 := big.NewInt(0)
@@ -145,22 +147,22 @@ func (curve *ECCurve) Double(p1 *ECPoint) *ECPoint {
   p2.Y.Mul(p2.Y, s)
   p2.Y.Sub(p2.Y, p1.Y)
 
-  p2.X.Mod(p2.X, curve.Fp)
-  p2.Y.Mod(p2.Y, curve.Fp)
+  p2.X.Mod(p2.X, c.P)
+  p2.Y.Mod(p2.Y, c.P)
 
-  return &p2
+  return p2
 }
 
-func (curve *ECCurve) ScalarMultiply(scalar *big.Int, p1 *ECPoint) *ECPoint {
-  //scalar.Mod(scalar, curve.Fp)
+func (c *PrimeCurve) ScalarMultiply(scalar *big.Int, p1 *Point) *Point {
+  //scalar.Mod(scalar, curve.P)
 
-  r := p1.CopyECPoint()
+  r := p1.Copy()
 
   for i := 0; i < scalar.BitLen(); i++ {
     if scalar.Bit(i) == 1 {
-      r = curve.Add(r, p1)
+      r = c.Add(r, p1)
     }
-    r = curve.Double(r)
+    r = c.Double(r)
   }
 
   return r
