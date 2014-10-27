@@ -37,15 +37,23 @@ func NewECCurve(n, a, b, fp, px, py, qx, qy string) *ECCurve {
   curve.B.SetString(b, 16)
   curve.Fp.SetString(fp, 10)
 
-  curve.P = ECPoint{big.NewInt(0), big.NewInt(0), false}
-  curve.P.X.SetString(px, 16)
-  curve.P.Y.SetString(py, 16)
-
-  curve.Q = ECPoint{big.NewInt(0), big.NewInt(0), false}
-  curve.Q.X.SetString(qx, 16)
-  curve.Q.Y.SetString(qy, 16)
+  curve.P = *NewECPoint(px, py, 16)
+  curve.Q = *NewECPoint(qx, qy, 16)
 
   return &curve
+}
+
+func NewECPoint(x string, y string, base int) *ECPoint {
+  new_point := ECPoint{big.NewInt(0), big.NewInt(0), false}
+  new_point.X.SetString(x, base)
+  new_point.Y.SetString(y, base)
+  return &new_point
+}
+
+func (old_point *ECPoint) CopyECPoint() *ECPoint {
+  new_point := NewECPoint(old_point.X.String(), old_point.Y.String(), 10)
+  new_point.Infinite = old_point.Infinite
+  return new_point
 }
 
 func NewDualECDRBG(curve *ECCurve) *DualECDRBG {
@@ -61,7 +69,7 @@ func (g *DualECDRBG) Seed(seed *big.Int) {
   g.generate_number()
 }
 
-func (curve *ECCurve) Satisfied(p ECPoint) bool {
+func (curve *ECCurve) Satisfied(p *ECPoint) bool {
   // On curve if (y^2) - (x^3 + ax + b (mod p)) == 0
 
   // y^2
@@ -87,19 +95,17 @@ func (curve *ECCurve) Satisfied(p ECPoint) bool {
   diff := big.NewInt(0)
   diff.Sub(y2, rhs)
 
-  fmt.Printf("Satisfied?:\nlhs = %d\nrhs = %d\ndiff = %d\n\n", y2, rhs, diff)
-
   return diff.Cmp(big.NewInt(0)) == 0
 }
 
 func (g *DualECDRBG) generate_number() {
   g.StateIndex++
   g.StateBit = 0
-  s := g.curve.ScalarMultiply(g.S, g.curve.P)
+  s := g.curve.ScalarMultiply(g.S, &g.curve.P)
   if !g.curve.Satisfied(s) {
     fmt.Println("s not on curve")
   }
-  z := g.curve.ScalarMultiply(s.X, g.curve.Q)
+  z := g.curve.ScalarMultiply(s.X, &g.curve.Q)
   if !g.curve.Satisfied(z) {
     fmt.Println("z not on curve")
   }
@@ -107,9 +113,27 @@ func (g *DualECDRBG) generate_number() {
   g.Z = z.X
 }
 
-func (curve *ECCurve) Add(p1 ECPoint, p2 ECPoint) ECPoint {
-  if p1.X == p2.X && p1.Y == p2.Y {
-    return curve.Double(p1)
+func (curve *ECCurve) Add(p1 *ECPoint, p2 *ECPoint) *ECPoint {
+  fmt.Printf("  x = %d\n  y = %d\n  s = %d\n", p1.X, p1.Y, curve.Satisfied(p1))
+  fmt.Printf("+\n  x = %d\n  y = %d\n  s = %d\n", p2.X, p2.Y, curve.Satisfied(p2))
+
+  if p1.X.String() == p2.X.String() && p1.Y.String() == p2.Y.String() {
+    p3 := curve.Double(p1)
+    fmt.Printf("=\n  x = %d\n  y = %d\n  s = %d\n", p3.X, p3.Y, curve.Satisfied(p3))
+    fmt.Println("\n-------\n")
+    return p3
+  }
+
+  // Addition must be commutative. Yet this routine works IFF p1.X < p2.X.
+  // I don't understand this, and that should scare you as much as it does me.
+  // Nothing I've read says this constraint should be necessary.
+  // TL;DR hey something's wrong!
+  // @TODO: Work out if/where this function still fails and see if you can
+  // identify the mistaken math. Number Theory class may help.
+  if p1.X.Cmp(p2.X) > 0 {
+    tp := p1.CopyECPoint()
+    p1 = p2
+    p2 = tp
   }
 
   st := big.NewInt(0)
@@ -135,10 +159,13 @@ func (curve *ECCurve) Add(p1 ECPoint, p2 ECPoint) ECPoint {
   p3.X.Mod(p3.X, curve.Fp)
   p3.Y.Mod(p3.Y, curve.Fp)
 
-  return p3
+  fmt.Printf("=\n  x = %d\n  y = %d\n  s = %d\n", p3.X, p3.Y, curve.Satisfied(&p3))
+  fmt.Println("\n-------\n")
+
+  return &p3
 }
 
-func (curve *ECCurve) Double(p1 ECPoint) ECPoint {
+func (curve *ECCurve) Double(p1 *ECPoint) *ECPoint {
   p2 := ECPoint{big.NewInt(0), big.NewInt(0), false}
   s := big.NewInt(0)
   s.Exp(p1.X, big.NewInt(2), nil)
@@ -164,40 +191,19 @@ func (curve *ECCurve) Double(p1 ECPoint) ECPoint {
   p2.X.Mod(p2.X, curve.Fp)
   p2.Y.Mod(p2.Y, curve.Fp)
 
-  return p2
+  return &p2
 }
 
-func (curve *ECCurve) ScalarMultiply(scalar *big.Int, p1 ECPoint) ECPoint {
+func (curve *ECCurve) ScalarMultiply(scalar *big.Int, p1 *ECPoint) *ECPoint {
   //scalar.Mod(scalar, curve.Fp)
 
-  r := ECPoint{big.NewInt(0), big.NewInt(0), false} // Point at infinity
-  r.X.SetString(p1.X.String(), 10)
-  r.Y.SetString(p1.Y.String(), 10)
+  r := p1.CopyECPoint()
 
-  // @TODO: Somehow these operations appear to work with r := p1 or when done
-  // outside this method. Something memoryish is wrong?
   for i := 0; i < scalar.BitLen(); i++ {
-    if curve.Satisfied(r) {
-      fmt.Printf("%d on curve before %d\n", i, scalar.Bit(i))
-    } else {
-      fmt.Printf("%d not on curve before %d\n", i, scalar.Bit(i))
-    }
-
     if scalar.Bit(i) == 1 {
       r = curve.Add(r, p1)
     }
-    if curve.Satisfied(r) {
-      fmt.Printf("%d on curve just after %d\n", i, scalar.Bit(i))
-    } else {
-      fmt.Printf("%d not on curve just after %d\n", i, scalar.Bit(i))
-    }
     r = curve.Double(r)
-
-    if curve.Satisfied(r) {
-      fmt.Printf("%d on curve after %d\n", i, scalar.Bit(i))
-    } else {
-      fmt.Printf("%d not on curve after %d\n", i, scalar.Bit(i))
-    }
   }
 
   return r
