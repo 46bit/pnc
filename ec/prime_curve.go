@@ -1,6 +1,7 @@
 package ec
 
 import (
+  "fmt"
   "math/big"
 )
 
@@ -20,7 +21,7 @@ type PrimeCurve struct {
 }
 
 func NewPrimeCurve(p, a, b, gx, gy, n, h *big.Int) *PrimeCurve {
-  c := PrimeCurve{p, a, b, &Point{gx, gy}, n, h}
+  c := PrimeCurve{p, a, b, &Point{gx, gy, true}, n, h}
   return &c
 }
 
@@ -56,8 +57,12 @@ func (c *PrimeCurve) Satisfied(p *Point) bool {
 func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   // Return infinite point if p1 or p2 is infinite. Return infinite point if
   // p1 == -p1 (x1==x2, y1==-y2).
-  if (p1.X.Cmp(p2.X) == 0 && p1.Y.Cmp(p2.Y) < 0) || !p1.Finite() || !p2.Finite() {
-    return &Point{big.NewInt(0), big.NewInt(0)}
+  if !p2.Finite {
+    fmt.Println("p2 not finite")
+    return p1
+  }
+  if !p1.Finite {
+    return p2
   }
 
   // Double p1 if p1==p2.
@@ -87,7 +92,7 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   mi.ModInverse(sb, c.P)
   st.Mul(st, mi)
 
-  p3 := &Point{big.NewInt(0), big.NewInt(0)}
+  p3 := &Point{big.NewInt(0), big.NewInt(0), true}
 
   p3.X.Exp(st, big.NewInt(2), nil)
   p3.X.Sub(p3.X, p1.X)
@@ -105,8 +110,8 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
 
 func (c *PrimeCurve) Double(p1 *Point) *Point {
   // If p1 infinite or y1==0, give infinite point.
-  if !p1.Finite() || p1.Y.String() == "0" {
-    return &Point{big.NewInt(0), big.NewInt(0)}
+  if !p1.Finite {
+    return p1
   }
 
   s := big.NewInt(0)
@@ -121,7 +126,7 @@ func (c *PrimeCurve) Double(p1 *Point) *Point {
   mi.ModInverse(k, c.P)
   s.Mul(s, mi)
 
-  p2 := &Point{big.NewInt(0), big.NewInt(0)}
+  p2 := &Point{big.NewInt(0), big.NewInt(0), true}
 
   p2.X.Exp(s, big.NewInt(2), nil)
   px2 := big.NewInt(0)
@@ -139,17 +144,26 @@ func (c *PrimeCurve) Double(p1 *Point) *Point {
 }
 
 func (c *PrimeCurve) ScalarMultiply(scalar *big.Int, p1 *Point) *Point {
-  //scalar.Mod(scalar, curve.P)
+  r0 := InfinitePoint()
+  r1 := p1.Copy()
 
-  r := p1.Copy()
-
-  // Particularly vulnerable to side-channel attacks between add and double.
-  for i := 0; i < scalar.BitLen(); i++ {
-    if scalar.Bit(i) == 1 {
-      r = c.Add(r, p1)
-    }
-    r = c.Double(r)
+  if scalar.Cmp(big.NewInt(0)) < 1 {
+    return r1
   }
 
-  return r
+  for i := scalar.BitLen() - 1; i >= 0; i-- {
+    if scalar.Bit(i) == 0 {
+      r1 = c.Add(r0, r1)
+      r0 = c.Double(r0)
+    } else {
+      r0 = c.Add(r0, r1)
+      r1 = c.Double(r1)
+    }
+  }
+
+  return r0
+}
+
+func (c *PrimeCurve) PrintPoint(p *Point) {
+  fmt.Printf("---\nx = %X\ny = %X\n---\n", p.X, p.Y)
 }

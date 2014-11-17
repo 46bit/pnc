@@ -17,7 +17,7 @@ type DualECDRBG struct {
 }
 
 func NewDualECDRBG(c *ec.PrimeCurve, qx, qy, seed *big.Int) *DualECDRBG {
-  g := DualECDRBG{c, &ec.Point{qx, qy}, big.NewInt(0), big.NewInt(0), 0, 0}
+  g := DualECDRBG{c, &ec.Point{qx, qy, true}, big.NewInt(0), big.NewInt(0), 0, 0}
   g.seed(seed)
   return &g
 }
@@ -33,18 +33,21 @@ func (g *DualECDRBG) generate_number() {
   g.StateBit = 0
   s := g.C.ScalarMultiply(g.S, g.C.G)
   z := g.C.ScalarMultiply(s.X, g.Q)
+
   if !g.C.Satisfied(s) {
-    fmt.Println("s not on curve")
+    fmt.Printf("s = g.C.G * %X not on curve\n", g.S)
   }
   if !g.C.Satisfied(z) {
-    fmt.Println("z not on curve")
+    fmt.Printf("z = g.Q * %X not on curve\n", s.X)
   }
-  if !s.Finite() {
+
+  if !s.Finite {
     fmt.Println("s infinite")
   }
-  if !z.Finite() {
+  if !z.Finite {
     fmt.Println("z infinite")
   }
+
   g.S = s.X
   g.Z = z.X
 }

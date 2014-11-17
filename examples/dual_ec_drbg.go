@@ -67,20 +67,20 @@ func main() {
     if !curve.Satisfied(p) {
       fmt.Printf("Generator point doubled %d times is not on curve!\n", i)
     }
-    if !p.Finite() {
+    if !p.Finite {
       fmt.Printf("Generator point doubled %d times was infinite!\n", i)
     }
   }
 
   // ----------------
 
-  p2 := &ec.Point{big.NewInt(0), big.NewInt(0)}
+  p2 := &ec.Point{big.NewInt(0), big.NewInt(0), false}
   p2 = curve.Add(curve.G, p2)
   p2 = curve.Double(p2)
   if curve.Satisfied(p2) {
     fmt.Println("Operations upon infinite point were on curve!")
   }
-  if p2.Finite() {
+  if p2.Finite {
     fmt.Println("Operations upon infinite point were finite!")
   }
 
@@ -95,7 +95,7 @@ func main() {
   if !curve.Satisfied(p2) {
     fmt.Printf("Generator Point Multiplied < N was not on curve!", n)
   }
-  if !p2.Finite() {
+  if !p2.Finite {
     fmt.Printf("Generator Point Multiplied < N was infinite!", n)
   }
 
@@ -119,7 +119,7 @@ func main() {
   if !curve.Satisfied(p3) {
     fmt.Println("Non-commutative points where p1.x < p2.x was not on curve!")
   }
-  if !p3.Finite() {
+  if !p3.Finite {
     fmt.Println("Non-commutative point where p1.x < p2.x was infinite!")
   }
 
@@ -127,7 +127,7 @@ func main() {
   if !curve.Satisfied(p3) {
     fmt.Println("Non-commutative point where p1.x > p2.x was not on curve!")
   }
-  if !p3.Finite() {
+  if !p3.Finite {
     fmt.Println("Non-commutative point where p1.x > p2.x was infinite!")
   }
 
