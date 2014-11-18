@@ -100,8 +100,6 @@ func (g *DualECDRBG) Byte() byte {
   }
 
   z_byte := g.ZBytes[g.StateBit / 8]
-
   g.StateBit += 8
-
   return z_byte
 }

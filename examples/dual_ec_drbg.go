@@ -2,7 +2,6 @@ package main
 
 import (
   "fmt"
-  "math/big"
   "github.com/46bit/pinocchio"
   "github.com/46bit/pinocchio/ec"
 )
@@ -33,123 +32,21 @@ func main() {
 
   // ----------------
 
-  // Check generator point is on the curve.
-  if !curve.Satisfied(curve.G) {
-    fmt.Println("Generator point not on curve!")
-  }
+  // Generate pseudorandom bytes using Dual_EC_DRBG on NIST Curve-256.
+  // NB: Never, ever use this generator. It is ridiculously slow, demonstrates bias
+  // and for the provided values of Q is backdoored by the NSA.
 
-  // ----------------
-
-  // Check a specified point is on the curve.
-  p := ec.NewPoint(
-    "84658269074130531148357510928537398853078465142270397446803060672548601752264",
-    "32478479853643897696398775628369298920280560255617340607511813418971428614048",
-    10)
-  if !curve.Satisfied(p) {
-    fmt.Println("Known-good point not on curve!")
-  }
-
-  // ----------------
-
-  // Check add routine seems to keep points on the curve (a *weak* suggestion
-  // the routine is correct).
-  if !curve.Satisfied(curve.Add(p, curve.G)) {
-    fmt.Println("Generator point plus known-good point not on curve!")
-  }
-
-  // ----------------
-
-  // Check doubling routines seem to keep points on the curve (a *weak* suggestion
-  // the routine is correct).
-  p = curve.G
-  for i := 1; i <= 100; i++ {
-    p = curve.Double(p)
-    if !curve.Satisfied(p) {
-      fmt.Printf("Generator point doubled %d times is not on curve!\n", i)
-    }
-    if !p.Finite {
-      fmt.Printf("Generator point doubled %d times was infinite!\n", i)
-    }
-  }
-
-  // ----------------
-
-  p2 := &ec.Point{big.NewInt(0), big.NewInt(0), false}
-  p2 = curve.Add(curve.G, p2)
-  p2 = curve.Double(p2)
-  if curve.Satisfied(p2) {
-    fmt.Println("Operations upon infinite point were on curve!")
-  }
-  if p2.Finite {
-    fmt.Println("Operations upon infinite point were finite!")
-  }
-
-  // ----------------
-
-  // Check scalar multiplication routine seems to keep points on the curve (a *weak*
-  // suggestion the routine is correct).
-  p = curve.G
-  n := big.NewInt(0)
-  n.SetString("e43fe3e4729612e27820e8c9ae246baf43f1d4281fcdc2ed", 16)
-  p2 = curve.ScalarMultiply(n, p)
-  if !curve.Satisfied(p2) {
-    fmt.Printf("Generator Point Multiplied < N was not on curve!", n)
-  }
-  if !p2.Finite {
-    fmt.Printf("Generator Point Multiplied < N was infinite!", n)
-  }
-
-  // ----------------
-
-  // Curious case of buggy point addition.
-
-  // This addition works with r1.x < r2.x despite point addition being commutative
-  // in nature. WTF, suggests something broken despite many known good results.
-  p1 := ec.NewPoint(
-    "48439561293906451759052585252797914202762949526041747995844080717082404635286",
-    "36134250956749795798585127919587881956611106672985015071877198253568414405109",
-    10)
-
-  p2 = ec.NewPoint(
-    "56515219790691171413109057904011688695424810155802929973526481321309856242040",
-    "3377031843712258259223711451491452598088675519751548567112458094635497583569",
-    10)
-
-  p3 := curve.Add(p1, p2)
-  if !curve.Satisfied(p3) {
-    fmt.Println("Non-commutative points where p1.x < p2.x was not on curve!")
-  }
-  if !p3.Finite {
-    fmt.Println("Non-commutative point where p1.x < p2.x was infinite!")
-  }
-
-  p4 := curve.Add(p2, p1)
-  if !curve.Satisfied(p3) {
-    fmt.Println("Non-commutative point where p1.x > p2.x was not on curve!")
-  }
-  if !p3.Finite {
-    fmt.Println("Non-commutative point where p1.x > p2.x was infinite!")
-  }
-
-  if !p3.Eq(p4) {
-    fmt.Println("Non-commutative points were not equal when swapped!")
-  }
-
-  // ----------------
-
-  // Generate 20 32-bit random integers using Dual_EC_DRBG on NIST Curve-256.
-  // NB: There is every reason to suspect the NSA can recover internal PRNG state
-  // when using the standard curves, and output demonstrates known biases using ~any
-  // curve. Plus, even a better optimized version is particularly slow.
-  s := ec.NewBigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935", 10)
+  // The seed s is the value of S *after* seeding the OpenSSL implementation.
+  // Any integer on the order of 2^256 will suffice.
+  // @TODO: Have compatible seeding routines with OpenSSL.
+  s := ec.NewBigInt("14611F02F7F34E6121433EFB0D71ECAC38F28BE4274B3DD784D2C1D4BE78DF89", 16)
   g := pinocchio.NewDualECDRBG(
     curve,
     ec.NewBigInt(dual_ec_drbg_curve_p256_qx, 16),
     ec.NewBigInt(dual_ec_drbg_curve_p256_qy, 16),
     s)
-  for i := 0; i < 20000; i++ {
-    fmt.Printf("%d: %d\n", i, g.Urand32())
-  }
 
-  // ----------------
+  for i := 0; i < 55; i++ {
+    fmt.Printf("%d: %x\n", i, g.Byte())
+  }
 }
