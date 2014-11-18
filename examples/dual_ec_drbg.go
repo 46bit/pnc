@@ -2,8 +2,8 @@ package main
 
 import (
   "fmt"
-  "github.com/46bit/pinocchio"
-  "github.com/46bit/pinocchio/ec"
+  "github.com/46bit/pnc"
+  "github.com/46bit/pnc/ec"
 )
 
 // NIST Curve P-256 (http://csrc.nist.gov/groups/ST/toolkit/documents/dss/NISTReCur.pdf)
@@ -40,7 +40,7 @@ func main() {
   // Any integer on the order of 2^256 will suffice.
   // @TODO: Have compatible seeding routines with OpenSSL.
   s := ec.NewBigInt("14611F02F7F34E6121433EFB0D71ECAC38F28BE4274B3DD784D2C1D4BE78DF89", 16)
-  g := pinocchio.NewDualECDRBG(
+  g := pnc.NewDualECDRBG(
     curve,
     ec.NewBigInt(dual_ec_drbg_curve_p256_qx, 16),
     ec.NewBigInt(dual_ec_drbg_curve_p256_qy, 16),

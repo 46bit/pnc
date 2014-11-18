@@ -1,7 +1,7 @@
-pinocchio
+pnc
 =========
 
-A collection of pseudorandom number generators built in Go for learning more about cryptography. These are not built to be secure and **will get you hacked if deployed in a real system**.
+A collection of pseudorandom number generators built in Go for learning more about cryptography. These are not built to be secure and **will get you hacked if deployed in a real system**. Formerly named pinocchio.
 
 ## Currently implemented
 * Tausworthe Generator

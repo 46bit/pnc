@@ -1,9 +1,9 @@
-package pinocchio
+package pnc
 
 import (
   "errors"
   "math/big"
-  "github.com/46bit/pinocchio/ec"
+  "github.com/46bit/pnc/ec"
 )
 
 type DualECDRBG struct {

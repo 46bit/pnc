@@ -1,4 +1,4 @@
-package pinocchio
+package pnc
 
 // http://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
 // Numerical Recipes  232 1664525 1013904223

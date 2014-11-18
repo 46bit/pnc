@@ -1,4 +1,4 @@
-package pinocchio
+package pnc
 
 import (
   "fmt"

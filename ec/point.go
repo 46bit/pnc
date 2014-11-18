@@ -5,7 +5,7 @@ import (
 )
 
 // Implementation of elliptic curve on prime field operations.
-// As with the rest of Pinocchio, this is a rough toolkit to
+// As with the rest of PNC, this is a rough toolkit to
 // break things rather than something to ever deploy. This suffers
 // from severe side channel attacks and I'll probably build a demo
 // of that one day.
