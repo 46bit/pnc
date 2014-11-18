@@ -11,13 +11,14 @@ type DualECDRBG struct {
   Q *ec.Point
 
   Z *big.Int
+  z_bytes []byte
   S *big.Int
   StateIndex uint64
   StateBit uint32
 }
 
 func NewDualECDRBG(c *ec.PrimeCurve, qx, qy, seed *big.Int) *DualECDRBG {
-  g := DualECDRBG{c, &ec.Point{qx, qy, true}, big.NewInt(0), big.NewInt(0), 0, 0}
+  g := DualECDRBG{c, &ec.Point{qx, qy, true}, big.NewInt(0), nil, big.NewInt(0), 0, 0}
   g.seed(seed)
   return &g
 }
@@ -30,9 +31,12 @@ func (g *DualECDRBG) seed(seed *big.Int) {
 
 func (g *DualECDRBG) generate_number() {
   g.StateIndex++
-  g.StateBit = 0
+
   s := g.C.ScalarMultiply(g.S, g.C.G)
   z := g.C.ScalarMultiply(s.X, g.Q)
+
+  fmt.Printf("s is\nx = %X\ny = %X\n\n", s.X, s.Y)
+  fmt.Printf("z is\nx = %X\ny = %X\n\n", z.X, z.Y)
 
   if !g.C.Satisfied(s) {
     fmt.Printf("s = g.C.G * %X not on curve\n", g.S)
@@ -50,12 +54,19 @@ func (g *DualECDRBG) generate_number() {
 
   g.S = s.X
   g.Z = z.X
+
+  g.z_bytes = g.Z.Bytes()
+  g.StateBit = 16
+  fmt.Printf("%x\n", g.z_bytes)
 }
 
 func (g *DualECDRBG) Bit() uint32 {
-  bit := g.Z.Bit(int(g.StateBit))
+  z_byte := g.z_bytes[g.StateBit / 8]
+  z_bit_shift := 7 - (g.StateBit % 8)
+  bit := 1 & (z_byte >> z_bit_shift)
+
   g.StateBit++
-  if int(g.StateBit) >= g.Z.BitLen() - 16 {
+  if int(g.StateBit) >= g.Z.BitLen() { // @TODO: think if the bitlen-16 is off by 1
     g.generate_number()
   }
   return uint32(bit)
