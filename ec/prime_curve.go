@@ -1,8 +1,17 @@
 package ec
 
 import (
-  "fmt"
   "math/big"
+)
+
+const (
+  curve_p256_p = "115792089210356248762697446949407573530086143415290314195533631308867097853951"
+  curve_p256_n = "115792089210356248762697446949407573529996955224135760342422259061068512044369"
+  curve_p256_a = "-3"
+  curve_p256_b = "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b"
+  curve_p256_h = "1"
+  curve_p256_gx = "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
+  curve_p256_gy = "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
 )
 
 // Implementation of elliptic curve on prime field operations.
@@ -23,6 +32,17 @@ type PrimeCurve struct {
 func NewPrimeCurve(p, a, b, gx, gy, n, h *big.Int) *PrimeCurve {
   c := PrimeCurve{p, a, b, &Point{gx, gy, true}, n, h}
   return &c
+}
+
+func NewP256Curve() *PrimeCurve {
+  return NewPrimeCurve(
+    NewBigInt(curve_p256_p, 10),
+    NewBigInt(curve_p256_a, 10),
+    NewBigInt(curve_p256_b, 16),
+    NewBigInt(curve_p256_gx, 16),
+    NewBigInt(curve_p256_gy, 16),
+    NewBigInt(curve_p256_n, 10),
+    NewBigInt(curve_p256_h, 10))
 }
 
 func (c *PrimeCurve) Satisfied(p *Point) bool {
@@ -58,7 +78,6 @@ func (c *PrimeCurve) Add(p1 *Point, p2 *Point) *Point {
   // Return infinite point if p1 or p2 is infinite. Return infinite point if
   // p1 == -p1 (x1==x2, y1==-y2).
   if !p2.Finite {
-    fmt.Println("p2 not finite")
     return p1
   }
   if !p1.Finite {
@@ -151,6 +170,8 @@ func (c *PrimeCurve) ScalarMultiply(scalar *big.Int, p1 *Point) *Point {
     return r1
   }
 
+  scalar.Mod(scalar, c.P)
+
   for i := scalar.BitLen() - 1; i >= 0; i-- {
     if scalar.Bit(i) == 0 {
       r1 = c.Add(r0, r1)
@@ -162,8 +183,4 @@ func (c *PrimeCurve) ScalarMultiply(scalar *big.Int, p1 *Point) *Point {
   }
 
   return r0
-}
-
-func (c *PrimeCurve) PrintPoint(p *Point) {
-  fmt.Printf("---\nx = %X\ny = %X\n---\n", p.X, p.Y)
 }

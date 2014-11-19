@@ -103,3 +103,17 @@ func (g *DualECDRBG) Byte() byte {
   g.StateBit += 8
   return z_byte
 }
+
+func (g *DualECDRBG) Bytes(length uint32) []byte {
+  bs := make([]byte, length)
+
+  for i := uint32(0); i < length; i++ {
+    bs[i] = g.ZBytes[g.StateBit / 8]
+    g.StateBit += 8
+    if int(g.StateBit / 8) >= len(g.ZBytes) {
+      g.generate_number()
+    }
+  }
+
+  return bs
+}

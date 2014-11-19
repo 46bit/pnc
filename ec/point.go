@@ -1,6 +1,7 @@
 package ec
 
 import (
+  "fmt"
   "math/big"
 )
 
@@ -38,4 +39,8 @@ func (p *Point) Copy() *Point {
   p2 := NewPoint(p.X.String(), p.Y.String(), 10)
   p2.Finite = p.Finite
   return p2
+}
+
+func (p *Point) Print() {
+  fmt.Printf("---\nx = %X\ny = %X\n---\n", p.X, p.Y)
 }

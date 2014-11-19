@@ -19,12 +19,13 @@ type MersenneTwister struct {
   index int
 }
 
-func NewMersenneTwister() MersenneTwister {
+func NewMersenneTwister(seed uint32) MersenneTwister {
   m := MersenneTwister{}
+  m.seed(seed)
   return m
 }
 
-func (m *MersenneTwister) Seed(seed uint32) {
+func (m *MersenneTwister) seed(seed uint32) {
   m.index = 0
   m.State[0] = seed
   for i := 1; i < mersenne_twister_n; i++ {
@@ -123,22 +124,3 @@ func (m *MersenneTwister) Urand32ToState(urand32 uint32) uint32 {
 
   return urand32
 }
-
-/*
-func main() {
-  m := NewMersenneTwister()
-  m.Seed(0)
-
-  var urand32s [624]uint32
-  for i := 0; i < len(urand32s); i++ {
-    urand32s[i] = m.Urand32()
-  }
-
-  m2 := NewMersenneTwister()
-  m2.SeedFromUrand32s(urand32s)
-
-  for i := 0; i < 10000; i++ {
-    fmt.Printf("%d = %d\n", m.Urand32(), m2.Urand32())
-  }
-}
-*/
