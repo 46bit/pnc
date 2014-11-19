@@ -50,18 +50,3 @@ func (b *BlumMicali) Urand32() uint32 {
   }
   return urand32
 }
-
-/*
-func main() {
-  p := big.NewInt(1169939)
-  g := big.NewInt(69937)
-  s := big.NewInt(3)
-
-  b := NewBlumMicali()
-  b.Seed(p, g, s)
-
-  for i := 0; i < 20; i++ {
-    fmt.Printf("%d: %d\n", i, b.Urand32())
-  }
-}
-*/

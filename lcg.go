@@ -47,14 +47,3 @@ func (l *LCG) Urand32() uint32 {
   }
   return v
 }
-
-/*
-func main() {
-  l := NewLCG()
-  l.Seed(0)
-
-  for i := 0; i < 20; i++ {
-    fmt.Printf("%d: %d\n", i, l.Urand32())
-  }
-}
-*/
